@@ -36,12 +36,27 @@
   .foot{font-size:11px;color:#5a6188;margin-top:6px;text-align:center;line-height:1.6}
   #links{display:flex;flex-direction:column;gap:16px;width:100%;align-items:center;opacity:.4;pointer-events:none}
   #links.ready{opacity:1;pointer-events:auto}
+  .nokey{display:none;width:100%;max-width:420px;border:2px solid #ffd479;border-radius:18px;padding:20px;
+         background:#1d1a10;color:#ffe9b0;font-size:16px;line-height:1.8;text-align:left}
+  .nokey b{display:block;font-size:19px;color:#fff;margin-bottom:8px}
+  .nokey .line{display:none;margin-top:14px}
+  .nokey a.ext{display:block;margin-top:8px;padding:14px;border-radius:12px;background:#7c8cff;color:#fff;
+               text-align:center;text-decoration:none;font-size:17px}
+  .saved{display:none;font-size:15px;color:#46d18a;text-align:center}
 </style>
 </head>
 <body>
   <h1>携帯コックピット</h1>
   <div class="sub">スマホから自宅Macを動かす入口</div>
   <div id="status"><span class="dot off"></span>接続を確認中…</div>
+
+  <div class="saved" id="saved">鍵が入りました。下のボタンから開けます。</div>
+  <div class="nokey" id="nokey">
+    <b>この携帯には、まだ鍵が入っていません</b>
+    <span>Obsidianで「携帯アクセス」を検索して、ノートのリンクを押してください。1回だけで済みます。</span>
+    <span class="line" id="inline">LINEの中の画面には鍵が入りません。下のボタンで開き直してください。
+      <a class="ext" href="https://imai-design.github.io/keitai/?openExternalBrowser=1">Safariで開き直す</a></span>
+  </div>
 
   <div id="links">
     <a class="btn term" id="lk-board" href="#"><span class="ico">●</span>
@@ -65,7 +80,8 @@
   const KEY_STORE = "keitai_key";
   const params = new URLSearchParams(location.hash.slice(1));
   let key = params.get("k");
-  if (key) { try{ localStorage.setItem(KEY_STORE, key); }catch(e){} history.replaceState(null,"",location.pathname); }
+  let justSaved = false;
+  if (key) { try{ localStorage.setItem(KEY_STORE, key); }catch(e){} justSaved = true; history.replaceState(null,"",location.pathname); }
   else { try{ key = localStorage.getItem(KEY_STORE) || ""; }catch(e){ key=""; } }
 
   const statusEl = document.getElementById("status");
@@ -84,11 +100,16 @@
     .then(d => {
       if (!d.base) throw 0;
       setLinks(d.base);
-      linksEl.classList.add("ready");
       const upd = d.updated ? ("  (更新 "+d.updated+")") : "";
       statusEl.innerHTML = '<span class="dot on"></span>Mac 稼働中' + upd;
-      if (!key) {
-        statusEl.innerHTML += '<br><span style="color:#ffd479">初回は Obsidian「携帯アクセス」のリンクから開いて鍵を保存してください</span>';
+      if (key) {
+        linksEl.classList.add("ready");
+        if (justSaved) document.getElementById("saved").style.display = "block";
+      } else {
+        // 鍵が無いままボタンを押すと「開けませんでした」に着くだけなので、ボタンを出さずに入れ方を出す
+        linksEl.style.display = "none";
+        document.getElementById("nokey").style.display = "block";
+        if (/Line\//i.test(navigator.userAgent)) document.getElementById("inline").style.display = "block";
       }
     })
     .catch(() => {
